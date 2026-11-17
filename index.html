@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Editor de Diagramas de Flujo - Avance 2</title>
+  <style>
+    /* ESTILOS GENERALES */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background-color: #f4f6f9;
+    }
+
+    header {
+      background-color: #1e293b;
+      color: #fff;
+      padding: 12px 20px;
+      font-size: 18px;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* DISTRIBUCIÓN PRINCIPAL */
+    .main-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 260px;
+      background-color: #e2e8f0;
+      border-right: 2px solid #cbd5e1;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      gap: 12px;
+      overflow-y: auto;
+    }
+
+    .panel-box {
+      background-color: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 10px;
+    }
+
+    .panel-title {
+      font-size: 13px;
+      font-weight: bold;
+      color: #475569;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 4px;
+    }
+
+    /* BOTONES DE SÍMBOLOS */
+    .symbol-btn {
+      display: block;
+      width: 100%;
+      padding: 7px;
+      margin-bottom: 5px;
+      background-color: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: center;
+      font-size: 12px;
+      transition: background 0.2s;
+    }
+
+    .symbol-btn:hover {
+      background-color: #2563eb;
+    }
+
+    .workspace {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* LIENZO Y PANEL DE CÓDIGO */
+    .canvas-container {
+      flex: 1;
+      background-color: #ffffff;
+      position: relative;
+      overflow: auto;
+    }
+
+    #flowchart-svg {
+      width: 100%;
+      height: 100%;
+      background-size: 20px 20px;
+      background-image:
+        radial-gradient(circle, #cbd5e1 1px, transparent 1px);
+    }
+
+    .code-panel {
+      height: 160px;
+      background-color: #0f172a;
+      color: #38bdf8;
+      border-top: 2px solid #334155;
+      padding: 10px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 13px;
+      overflow-y: auto;
+    }
+
+    .code-panel h4 {
+      color: #94a3b8;
+      margin-bottom: 5px;
+      font-family: Arial, sans-serif;
+    }
+
+    .node-element {
+      cursor: move;
+    }
+    .node-element:hover {
+      opacity: 0.85;
+    }
+
+    .node-element.selected > *:first-child {
+      stroke: #16a34a !important;
+      stroke-width: 3px !important;
+      filter: drop-shadow(0 0 5px rgba(22, 163, 74, 0.6));
+    }
+
+    .tool-input {
+      width: 100%;
+      padding: 5px;
+      margin-bottom: 8px;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <span>Editor de Diagramas de Flujo</span>
+    <span style="font-size: 13px; font-weight: normal;">Avance 2: Símbolos, Edición, Estilos y Código C</span>
+  </header>
+
+  <div class="main-container">
+    
+    <!-- PANEL LATERAL -->
+    <aside class="sidebar">
+      
+      <!-- PANEL DE SÍMBOLOS -->
+      <div class="panel-box">
+        <div class="panel-title">Panel de Símbolos</div>
+        <button class="symbol-btn" onclick="addSymbol('INICIO', 'INICIO')">Inicio</button>
+        <button class="symbol-btn" onclick="addSymbol('FIN', 'FIN')">Fin</button>
+        <button class="symbol-btn" onclick="addSymbol('DECLARACION', 'int num;')">Declaración de Variables</button>
+        <button class="symbol-btn" onclick="addSymbol('PROCESO', 'i = 0')">Asignación / Proceso</button>
+        <button class="symbol-btn" onclick="addSymbol('CONDICION', 'condición')">Condición (IF)</button>
+        <button class="symbol-btn" onclick="addSymbol('FOR', 'for(...)')">Repetición (FOR)</button>
+        <button class="symbol-btn" onclick="addSymbol('WHILE', 'while(...)')">Repetición (WHILE)</button>
+        <button class="symbol-btn" onclick="addSymbol('DO WHILE', 'do...while')">Repetición (DO WHILE)</button>
+        <button class="symbol-btn" onclick="addSymbol('ENTRADA', 'Ingresa número')">Entrada de Datos</button>
+        <button class="symbol-btn" onclick="addSymbol('SALIDA', 'Resultado')">Salida de Datos</button>
+      </div>
+
+      <!-- PANEL DE HERRAMIENTAS -->
+      <div class="panel-box">
+        <div class="panel-title">Herramientas y Estilos</div>
+        <p id="selectionStatus" style="font-size: 11px; color: #475569; margin-bottom: 8px;">Selecciona un símbolo.</p>
+        
+        <label style="font-size: 11px; color: #475569;">Texto / Instrucción:</label>
+        <input type="text" id="nodeText" class="tool-input" placeholder="Edita el texto..." disabled>
+
+        <label style="font-size: 11px; color: #475569;">Color de Relleno:</label>
+        <input type="color" id="fillColor" value="#3b82f6" style="width: 100%; margin-bottom: 6px;" disabled>
+        
+        <label style="font-size: 11px; color: #475569;">Color de Contorno:</label>
+        <input type="color" id="strokeColor" value="#1d4ed8" style="width: 100%; margin-bottom: 6px;" disabled>
+
+        <label style="font-size: 11px; color: #475569;">Tamaño de Letra (px):</label>
+        <input type="number" id="fontSize" class="tool-input" value="12" min="8" max="24" disabled>
+
+        <button class="symbol-btn" style="background-color: #ef4444; margin-top: 5px;" onclick="deleteSelectedNode()">Eliminar Símbolo</button>
+        <button class="symbol-btn" style="background-color: #64748b; margin-top: 5px;" onclick="clearCanvas()">Limpiar Lienzo</button>
+      </div>
+
+    </aside>
+
+    <!-- ÁREA DE TRABAJO -->
+    <main class="workspace">
+      
+      <!-- LIENZO -->
+      <div class="canvas-container">
+        <svg id="flowchart-svg"></svg>
+      </div>
+
+      <!-- PANEL DE CÓDIGO C -->
+      <div class="code-panel">
+        <h4>Código Generado (C)</h4>
+        <pre id="code-output">void main() {\n    // El código se genera automáticamente a partir de los símbolos...\n}</pre>
+      </div>
+
+    </main>
+
+  </div>
+
+  <script>
+    const svgCanvas = document.getElementById('flowchart-svg');
+    let nodeCount = 0;
+    let selectedNode = null;
+
+    const fillInput = document.getElementById('fillColor');
+    const strokeInput = document.getElementById('strokeColor');
+    const textInput = document.getElementById('nodeText');
+    const fontSizeInput = document.getElementById('fontSize');
+    const selectionStatus = document.getElementById('selectionStatus');
+
+    // HABILITAR / DESHABILITAR CONTROLES
+    function updateControlsState(enabled) {
+      fillInput.disabled = !enabled;
+      strokeInput.disabled = !enabled;
+      textInput.disabled = !enabled;
+      fontSizeInput.disabled = !enabled;
+    }
+
+    // SELECCIONAR NODO
+    function selectNode(node) {
+      if (selectedNode) selectedNode.classList.remove('selected');
+      selectedNode = node;
+      
+      if (node) {
+        node.classList.add('selected');
+        const shape = node.querySelector('.shape');
+        const text = node.querySelector('text');
+        
+        fillInput.value = shape.getAttribute('fill');
+        strokeInput.value = shape.getAttribute('stroke');
+        textInput.value = text.textContent;
+        fontSizeInput.value = text.getAttribute('font-size') || 12;
+        
+        selectionStatus.textContent = 'Símbolo seleccionado.';
+        updateControlsState(true);
+      } else {
+        selectionStatus.textContent = 'Selecciona un símbolo.';
+        textInput.value = '';
+        updateControlsState(false);
+      }
+    }
+
+    // EVENTOS DE EDICIÓN EN TIEMPO REAL
+    fillInput.addEventListener('input', () => {
+      if (selectedNode) selectedNode.querySelector('.shape').setAttribute('fill', fillInput.value);
+    });
+
+    strokeInput.addEventListener('input', () => {
+      if (selectedNode) selectedNode.querySelector('.shape').setAttribute('stroke', strokeInput.value);
+    });
+
+    textInput.addEventListener('input', () => {
+      if (selectedNode) {
+        selectedNode.querySelector('text').textContent = textInput.value;
+        generateCCode();
+      }
+    });
+
+    fontSizeInput.addEventListener('input', () => {
+      if (selectedNode) {
+        selectedNode.querySelector('text').setAttribute('font-size', fontSizeInput.value);
+      }
+    });
+
+    svgCanvas.addEventListener('mousedown', (e) => {
+      if (e.target === svgCanvas) selectNode(null);
+    });
+
+    // TECLA SUPR PARA BORRAR
+    window.addEventListener('keydown', (e) => {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNode) {
+        if (document.activeElement !== textInput) {
+          deleteSelectedNode();
+        }
+      }
+    });
+
+    // AGREGAR SÍMBOLOS
+    function addSymbol(type, defaultText) {
+      const defaultFill = type === 'INICIO' || type === 'FIN' ? '#10b981' : '#3b82f6';
+      const defaultStroke = type === 'INICIO' || type === 'FIN' ? '#047857' : '#1d4ed8';
+      
+      const x = 80 + (nodeCount * 15) % 300;
+      const y = 50 + (nodeCount * 25) % 250;
+      nodeCount++;
+
+      const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      group.setAttribute('class', 'node-element');
+      group.setAttribute('transform', `translate(${x}, ${y})`);
+      group.dataset.type = type;
+
+      let shape;
+      let textY = 28;
+
+      if (type === 'INICIO' || type === 'FIN') {
+        shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        shape.setAttribute('width', '130');
+        shape.setAttribute('height', '45');
+        shape.setAttribute('rx', '22');
+        shape.setAttribute('ry', '22');
+      } else if (type === 'DECLARACION' || type === 'PROCESO') {
+        shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        shape.setAttribute('width', '140');
+        shape.setAttribute('height', '45');
+      } else if (['CONDICION', 'FOR', 'WHILE', 'DO WHILE'].includes(type)) {
+        shape = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        shape.setAttribute('points', '70,0 140,35 70,70 0,35');
+        textY = 39;
+      } else if (type === 'ENTRADA') {
+        shape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        shape.setAttribute('d', 'M 0 0 H 140 V 45 Q 105 25 70 45 Q 35 65 0 45 Z');
+      } else if (type === 'SALIDA') {
+        shape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        shape.setAttribute('d', 'M 15 0 H 140 V 45 H 0 V 15 Z');
+      }
+
+      shape.setAttribute('class', 'shape');
+      shape.setAttribute('fill', defaultFill);
+      shape.setAttribute('stroke', defaultStroke);
+      shape.setAttribute('stroke-width', '2');
+
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', type.includes('CONDICION') || type.includes('FOR') || type.includes('WHILE') ? '70' : '70');
+      text.setAttribute('y', String(textY));
+      text.setAttribute('fill', '#ffffff');
+      text.setAttribute('font-size', '12');
+      text.setAttribute('font-weight', 'bold');
+      text.setAttribute('text-anchor', 'middle');
+      text.textContent = defaultText;
+
+      group.appendChild(shape);
+      group.appendChild(text);
+      makeDraggable(group);
+
+      svgCanvas.appendChild(group);
+      selectNode(group);
+      generateCCode();
+    }
+
+    // ARRASTRAR SÍMBOLOS
+    function makeDraggable(element) {
+      let isDragging = false;
+      let startX, startY;
+      let currentX = 0, currentY = 0;
+
+      element.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        selectNode(element);
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+
+        const transform = element.getAttribute('transform');
+        if (transform) {
+          const match = /translate\(([^,]+),([^)]+)\)/.exec(transform);
+          if (match) {
+            currentX = parseFloat(match[1]);
+            currentY = parseFloat(match[2]);
+          }
+        }
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        element.setAttribute('transform', `translate(${currentX + dx}, ${currentY + dy})`);
+      });
+
+      window.addEventListener('mouseup', () => {
+        isDragging = false;
+      });
+    }
+
+    // ELIMINAR NODO SELECCIONADO
+    function deleteSelectedNode() {
+      if (selectedNode) {
+        selectedNode.remove();
+        selectNode(null);
+        generateCCode();
+      }
+    }
+
+    // LIMPIAR LIENZO
+    function clearCanvas() {
+      svgCanvas.innerHTML = '';
+      nodeCount = 0;
+      selectNode(null);
+      generateCCode();
+    }
+
+    // GENERADOR DE CÓDIGO EN C
+    function generateCCode() {
+      const nodes = Array.from(svgCanvas.querySelectorAll('.node-element'));
+      
+      // Ordenar nodos de arriba hacia abajo (posición Y)
+      nodes.sort((a, b) => {
+        const transA = a.getAttribute('transform');
+        const transB = b.getAttribute('transform');
+        const posY_A = parseFloat(/translate\(([^,]+),([^)]+)\)/.exec(transA)[2]);
+        const posY_B = parseFloat(/translate\(([^,]+),([^)]+)\)/.exec(transB)[2]);
+        return posY_A - posY_B;
+      });
+
+      let code = "void main() {\n";
+      
+      nodes.forEach(node => {
+        const type = node.dataset.type;
+        const text = node.querySelector('text').textContent.trim();
+
+        if (type === 'DECLARACION') {
+          code += `    ${text.endsWith(';') ? text : text + ';'}\n`;
+        } else if (type === 'PROCESO') {
+          code += `    ${text.endsWith(';') ? text : text + ';'}\n`;
+        } else if (type === 'ENTRADA') {
+          // Detectar variable o mensaje de entrada
+          code += `    printf("Ingresa ${text}: ");\n`;
+          code += `    scanf("%d", &${text.replace(/[^a-zA-Z0-9_]/g, '')});\n`;
+        } else if (type === 'SALIDA') {
+          code += `    printf("${text}\\n");\n`;
+        } else if (type === 'CONDICION') {
+          code += `    if (${text}) {\n        // Instrucciones SI\n    } else {\n        // Instrucciones NO\n    }\n`;
+        } else if (type === 'FOR') {
+          code += `    for (${text}) {\n        \n    }\n`;
+        } else if (type === 'WHILE') {
+          code += `    while (${text}) {\n        \n    }\n`;
+        } else if (type === 'DO WHILE') {
+          code += `    do {\n        \n    } while (${text});\n`;
+        }
+      });
+
+      code += "}";
+      document.getElementById('code-output').textContent = code;
+    }
+  </script>
+</body>
+</html>
